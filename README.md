@@ -2,6 +2,8 @@
 
 This project implements Active Inference agents in an Environment for the Mountain Car problem using the RxInfer.jl package.
 
+## Install Julia:
+https://julialang.org/downloads/
 ## Installation
 
 1. Clone this repository
