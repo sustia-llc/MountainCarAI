@@ -1,0 +1,13 @@
+name = "MountainCarAI"
+uuid = "1f36a04c-7039-11ef-9996-871f10ea5dee"
+authors = ["Tsondru <tsondru@sustia.com>, Holly Grimm <hgrimm@sustia.com>"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+RxInfer = "86711068-29c9-4ff7-b620-ae75d7495b3d"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+RxInfer = "3.6"
+julia = "1.10"
