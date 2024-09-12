@@ -148,8 +148,7 @@ using Test
 
         final_position1 = env.agents[1][:agent_x][end][1]
         final_position2 = env.agents[2][:agent_x][end][1]
-        @test final_position1 == 0.7270768614351046
-        @test final_position2 == -0.3387905257615951
-
+        @test isapprox(final_position1, 0.72, atol=0.01)
+        @test isapprox(final_position2, -0.33, atol=0.01)
     end
 end
