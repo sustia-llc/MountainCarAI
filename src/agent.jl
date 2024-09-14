@@ -16,7 +16,7 @@ import RxInfer.ReactiveMP: getrecent, messageout
     # Inverse engine force, from change in state to corresponding engine force
     h_inv = (delta_s_dot::AbstractVector) -> [atanh(clamp(delta_s_dot[2], -engine_force_limit+1e-3, engine_force_limit-1e-3)/engine_force_limit)] 
     
-    # Internal model perameters
+    # Internal model parameters
     Gamma = 1e4*diageye(2) # Transition precision
     Theta = 1e-4*diageye(2) # Observation variance
 
@@ -39,14 +39,17 @@ import RxInfer.ReactiveMP: getrecent, messageout
     return (s, )
 end
 
-function create_agent(;T = 20, Fg, Fa, Ff, engine_force_limit, x_target, initial_position, initial_velocity)
+function create_agent(engine_force_limit, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
+    Fa = (a::Real) -> engine_force_limit * tanh(a)
+    initial_state = [initial_position, initial_velocity]
+
     Epsilon = fill(huge, 1, 1)                # Control prior variance
-    m_u = Vector{Float64}[ [ 0.0] for k=1:T ] # Set control priors
-    V_u = Matrix{Float64}[ Epsilon for k=1:T ]
+    m_u = Vector{Float64}[ [ 0.0] for k=1:T_ai ] # Set control priors
+    V_u = Matrix{Float64}[ Epsilon for k=1:T_ai ]
 
     Sigma    = 1e-4*diageye(2) # Goal prior variance
-    m_x      = [zeros(2) for k=1:T]
-    V_x      = [huge*diageye(2) for k=1:T]
+    m_x      = [zeros(2) for k=1:T_ai]
+    V_x      = [huge*diageye(2) for k=1:T_ai]
     V_x[end] = Sigma # Set prior to reach goal at t=T
 
     # Set initial brain state prior
@@ -58,7 +61,7 @@ function create_agent(;T = 20, Fg, Fa, Ff, engine_force_limit, x_target, initial
 
     # The `infer` function is the heart of the agent
     # It calls the `RxInfer.inference` function to perform Bayesian inference by message passing
-    compute = (upsilon_t::Float64, y_hat_t::Vector{Float64}) -> begin
+    compute_ai = (upsilon_t::Float64, y_hat_t::Vector{Float64}) -> begin
         m_u[1] = [ upsilon_t ] # Register action with the generative model
         V_u[1] = fill(tiny, 1, 1) # Clamp control prior to performed action
 
@@ -72,12 +75,12 @@ function create_agent(;T = 20, Fg, Fa, Ff, engine_force_limit, x_target, initial
                     :m_s_t_min => m_s_t_min,
                     :V_s_t_min => V_s_t_min)
         
-        model  = mountain_car(T = T, Fg = Fg, Fa = Fa, Ff = Ff, engine_force_limit = engine_force_limit) 
+        model  = mountain_car(T = T_ai, Fg = Fg, Fa = Fa, Ff = Ff, engine_force_limit = engine_force_limit) 
         result = infer(model = model, data = data)
     end
     
     # The `act` function returns the inferred best possible action
-    act = () -> begin
+    act_ai = () -> begin
         if result !== nothing
             return mode(result.posteriors[:u][2])[1]
         else
@@ -86,24 +89,24 @@ function create_agent(;T = 20, Fg, Fa, Ff, engine_force_limit, x_target, initial
     end
     
     # The `future` function returns the inferred future states
-    future = () -> begin 
+    future_ai = () -> begin 
         if result !== nothing 
             return getindex.(mode.(result.posteriors[:s]), 1)
         else
-            return zeros(T)
+            return zeros(T_ai)
         end
     end
 
     # The `slide` function modifies the `(m_s_t_min, V_s_t_min)` for the next step
     # and shifts (or slides) the array of future goals `(m_x, V_x)` and inferred actions `(m_u, V_u)`
-    slide = () -> begin
+    slide_ai = () -> begin
 
         model  = RxInfer.getmodel(result.model)
         (s, )  = RxInfer.getreturnval(model)
         varref = RxInfer.getvarref(model, s) 
         var    = RxInfer.getvariable(varref)
         
-        slide_msg_idx = 3 # This index is model dependend
+        slide_msg_idx = 3 # This index is model dependent
         (m_s_t_min, V_s_t_min) = mean_cov(getrecent(messageout(var[2], slide_msg_idx)))
 
         m_u = circshift(m_u, -1)
@@ -117,5 +120,16 @@ function create_agent(;T = 20, Fg, Fa, Ff, engine_force_limit, x_target, initial
         V_x[end] = Sigma
     end
 
-    return (compute, act, slide, future)    
+    agent = Dict(
+        :act_ai => act_ai,
+        :future_ai => future_ai,
+        :compute_ai => compute_ai,
+        :slide_ai => slide_ai,
+        :agent_a => Float64[],
+        :agent_f => Vector{Float64}[],
+        :agent_x => Vector{Float64}[],
+        :Fa => Fa,
+        :initial_state => initial_state
+    )
+    return agent
 end

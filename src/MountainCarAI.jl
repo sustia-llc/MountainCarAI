@@ -7,6 +7,6 @@ include("physics.jl")
 include("agent.jl")
 include("environment.jl")
 
-export Environment, create_environment, step_environment!, create_agent, create_world, create_physics, create_agent_and_world, run_simulation
+export Environment, create_agent, create_physics, run_simulation
 
 end

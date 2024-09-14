@@ -12,31 +12,25 @@ using Test
         engine_force_limit1 = 0.04
         engine_force_limit2 = 0.02
 
-        agent1, execute_ai1, observe_ai1, initial_state1, height1, Fa1 = create_agent_and_world(
-            engine_force_limit1, initial_position, initial_velocity, T_ai, x_target
-        )
-        agent2, execute_ai2, observe_ai2, initial_state2, height2, Fa2 = create_agent_and_world(
-            engine_force_limit2, initial_position, initial_velocity, T_ai, x_target
-        )
+        # Create physics
+        Ff, Fg, height = create_physics()
+
+        agent1 = create_agent(engine_force_limit1, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
+        agent2 = create_agent(engine_force_limit2, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
 
         env = Environment(
             T_ai = T_ai,
             agents = [agent1, agent2],
-            execute_ai = [execute_ai1, execute_ai2],
-            observe_ai = [observe_ai1, observe_ai2],
-            initial_states = [initial_state1, initial_state2],
-            heights = [height1, height2],
             x_target = x_target,
             N_ai = N_ai,
-            Fas = [Fa1, Fa2]
+            Ff = Ff,
+            Fg = Fg,
+            height = height
         )
         
         @test env.T_ai == T_ai
         @test env.t == 1
         @test length(env.agents) == 2
-        @test length(env.execute_ai) == 2
-        @test length(env.observe_ai) == 2
-        @test length(env.agent_states) == 2
     end
     
     @testset "Environment Simulation" begin
