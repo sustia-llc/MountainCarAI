@@ -5,36 +5,34 @@ This project implements Active Inference agents in an Environment for the Mounta
 ```mermaid
 sequenceDiagram
     participant E as Environment
-    participant W as World
-    participant A as Agent
+    participant A as Agent    
+    participant P as Physics
 
+    E->>P: Create physics
+    P-->>E: Fg, Ff, height
+    E->>A: Create agent
+    A-->>E: Agent
     E->>E: Initialize environment
-    W->>W: Initialize world
-    A->>A: Initialize agent
 
-    loop For each time step
-        A->>A: act_ai()
-        A->>E: new_action
-        E->>A: Store new_action
+    Note over E: step_environment!
+    E->>A: act_ai()
+    A-->>E: new_action
+    E->>A: Store new_action
 
-        A->>A: future_ai()
-        A->>E: new_future
-        E->>A: Store new_future
+    E->>A: future_ai()
+    A-->>E: new_future
+    E->>A: Store new_future
 
-        E->>W: execute_ai(new_action, agent_state)
-        W->>E: Update agent_state
+    E->>E: execute_action!(new_action, agent)
+    E->>E: Update agent_state
 
-        E->>W: observe_ai(agent_state)
-        W->>E: new_observation
-        E->>A: Store new_observation
+    E->>E: observe_state(agent_state)
+    E->>A: Store new_observation
 
-        A->>A: compute_ai(new_action, new_observation)
-        A->>A: slide_ai()
+    E->>A: compute_ai(new_action, new_observation)
+    E->>A: slide_ai()
 
-        E->>E: Increment time step
-    end
-
-    E->>E: Print final state
+    Note over E: Increment time step
 ```
 
 ## Installation
