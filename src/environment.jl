@@ -3,17 +3,24 @@ using MountainCarAI
 mutable struct Environment
     T_ai::Int
     t::Int
-    agents::Vector{Dict}
+    agents::Vector{Dict{Symbol, Any}}
     agent_states::Vector{Vector{Float64}}
-    height::Function
     x_target::Vector{Float64}
     N_ai::Int
-    Ff::Function
-    Fg::Function
+    physics::Physics
 
-    Environment(; T_ai::Int, agents::Vector{Dict{Symbol, Any}}, x_target::Vector{Float64}, N_ai::Int, Ff::Function, Fg::Function, height::Function) = begin
-        agent_states = [agent[:initial_state] for agent in agents]
-        return new(T_ai, 1, agents, agent_states, height, x_target, N_ai, Ff, Fg)
+    function Environment(;
+    T_ai::Int,
+    agents::Vector{Dict{Symbol, Any}},
+    x_target::Vector{Float64},
+    N_ai::Int,
+    physics::Physics
+    )
+        agent_states = Vector{Vector{Float64}}(undef, length(agents))
+        for i in 1:length(agents)
+            agent_states[i] = copy(agents[i][:initial_state])
+        end
+        return new(T_ai, 1, agents, agent_states, x_target, N_ai, physics)
     end
 end
 
@@ -24,14 +31,14 @@ end
 function execute_action!(env::Environment, agent_index::Int, action::Float64)::Nothing
     state = env.agent_states[agent_index]
     y_t, y_dot_t = state
-    y_dot_t_new = y_dot_t + env.Fg(y_t) + env.Ff(y_dot_t) + env.agents[agent_index][:Fa](action)
+    y_dot_t_new = y_dot_t + env.physics.Fg(y_t) + env.physics.Ff(y_dot_t) + env.agents[agent_index][:Fa](action)
     y_t_new = y_t + y_dot_t_new
     env.agent_states[agent_index] = [y_t_new, y_dot_t_new]
     return nothing
 end
 
 function step_environment!(env::Environment)::Nothing
-    for (i, agent) in enumerate(env.agents)
+    for agent in env.agents
         # Compute new action
         new_action = agent[:act_ai]()
         push!(agent[:agent_a], new_action)
@@ -40,9 +47,15 @@ function step_environment!(env::Environment)::Nothing
         new_future = agent[:future_ai]()
         push!(agent[:agent_f], new_future)
 
+        # Find the agent index
+        agent_index = findfirst(==(agent), env.agents)
+        if isnothing(agent_index)
+            error("Agent not found in environment.")
+        end
+
         # Execute action and observe new state
-        execute_action!(env, i, new_action)
-        new_observation = observe_state(env, i)
+        execute_action!(env, agent_index, new_action)
+        new_observation = observe_state(env, agent_index)
         push!(agent[:agent_x], new_observation)
 
         # Update AI
@@ -53,7 +66,7 @@ function step_environment!(env::Environment)::Nothing
     return nothing
 end
 
-function run_simulation(; N_ai::Int=100, return_env::Bool=false)
+function run_simulation(; N_ai::Int=100, return_env::Bool=false)::Union{Environment, Vector{Float64}}
     # Set up simulation parameters
     T_ai = 50
     x_target = [0.5, 0.0]
@@ -63,11 +76,11 @@ function run_simulation(; N_ai::Int=100, return_env::Bool=false)
     engine_force_limit2 = 0.02
 
     # Create physics
-    Ff, Fg, height = create_physics()
+    physics = create_physics()
 
     # Create two agents
-    agent1 = create_agent(engine_force_limit1, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
-    agent2 = create_agent(engine_force_limit2, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
+    agent1 = create_agent(engine_force_limit1, initial_position, initial_velocity, T_ai, x_target, physics)
+    agent2 = create_agent(engine_force_limit2, initial_position, initial_velocity, T_ai, x_target, physics)
 
     # Initialize the environment
     env = Environment(
@@ -75,9 +88,7 @@ function run_simulation(; N_ai::Int=100, return_env::Bool=false)
         agents = [agent1, agent2],
         x_target = x_target,
         N_ai = N_ai,
-        Ff = Ff,
-        Fg = Fg,
-        height = height
+        physics = physics
     )
 
     # Step through actions for each agent within the environment
@@ -89,7 +100,7 @@ function run_simulation(; N_ai::Int=100, return_env::Bool=false)
         return env
     else
         # Return final positions of both agents
-        return [env.agents[1][:agent_x][end][1], env.agents[2][:agent_x][end][1]]
+        return [env.agent_states[1][1], env.agent_states[2][1]]
     end
 end
 

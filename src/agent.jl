@@ -39,7 +39,15 @@ import RxInfer.ReactiveMP: getrecent, messageout
     return (s, )
 end
 
-function create_agent(engine_force_limit, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
+function create_agent(
+    engine_force_limit::Float64,
+    initial_position::Float64,
+    initial_velocity::Float64,
+    T_ai::Int,
+    x_target::Vector{Float64},
+    physics::Physics
+)::Dict{Symbol, Any}
+
     Fa = (a::Real) -> engine_force_limit * tanh(a)
     initial_state = [initial_position, initial_velocity]
 
@@ -75,7 +83,7 @@ function create_agent(engine_force_limit, initial_position, initial_velocity, T_
                     :m_s_t_min => m_s_t_min,
                     :V_s_t_min => V_s_t_min)
         
-        model  = mountain_car(T = T_ai, Fg = Fg, Fa = Fa, Ff = Ff, engine_force_limit = engine_force_limit) 
+        model  = mountain_car(T = T_ai, Fg = physics.Fg, Fa = Fa, Ff = physics.Ff, engine_force_limit = engine_force_limit) 
         result = infer(model = model, data = data)
     end
     
@@ -125,7 +133,7 @@ function create_agent(engine_force_limit, initial_position, initial_velocity, T_
         :future_ai => future_ai,
         :compute_ai => compute_ai,
         :slide_ai => slide_ai,
-        :agent_a => Float64[],
+        :agent_a => Vector{Float64}(),
         :agent_f => Vector{Float64}[],
         :agent_x => Vector{Float64}[],
         :Fa => Fa,

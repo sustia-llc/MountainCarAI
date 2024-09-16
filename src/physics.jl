@@ -1,6 +1,13 @@
 import HypergeometricFunctions: _₂F₁
 
-function create_physics(; friction_coefficient::Float64 = 0.1)::Tuple{Function, Function, Function}
+struct Physics
+    friction_coefficient::Float64
+    Ff::Function
+    Fg::Function
+    height::Function
+end
+
+function create_physics(; friction_coefficient::Float64 = 0.1)::Physics
     # Define friction force as a function of velocity (y_dot)
     Ff = (y_dot::Real) -> -friction_coefficient * y_dot
     
@@ -26,5 +33,5 @@ function create_physics(; friction_coefficient::Float64 = 0.1)::Tuple{Function, 
         end
         0.05*h
     end
-    return (Ff, Fg, height)
+    return Physics(friction_coefficient, Ff, Fg, height)
 end

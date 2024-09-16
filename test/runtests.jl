@@ -13,19 +13,17 @@ using Test
         engine_force_limit2 = 0.02
 
         # Create physics
-        Ff, Fg, height = create_physics()
+        physics = create_physics()
 
-        agent1 = create_agent(engine_force_limit1, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
-        agent2 = create_agent(engine_force_limit2, initial_position, initial_velocity, T_ai, x_target, Ff, Fg)
+        agent1 = create_agent(engine_force_limit1, initial_position, initial_velocity, T_ai, x_target, physics)
+        agent2 = create_agent(engine_force_limit2, initial_position, initial_velocity, T_ai, x_target, physics)
 
         env = Environment(
             T_ai = T_ai,
             agents = [agent1, agent2],
             x_target = x_target,
             N_ai = N_ai,
-            Ff = Ff,
-            Fg = Fg,
-            height = height
+            physics = physics
         )
         
         @test env.T_ai == T_ai
